@@ -73,9 +73,9 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Update exercises
-router.put('/:id', async (req, res) => {
+router.put('/replace', async (req, res) => {
     await exercises.replaceOne({
-        _id: new mongo.ObjectId(req.params.id)
+        _id: new mongo.ObjectId(req.body.id)
     }, {
         ...req.body.updates,
         achieved: false,
@@ -85,16 +85,16 @@ router.put('/:id', async (req, res) => {
 });
 
 //Update Completed Status
-router.patch('/:id', async (req, res) => {
+router.patch('/achieve', async (req, res) => {
     await exercises.updateOne({
-        _id: new mongo.ObjectId(req.params.id)
+        _id: new mongo.ObjectId(req.body.id)
     }, {
         $set: {
-            completed: req.body.completed,
-            completedAt: new Date()
+            achieved: true,
+            achievedAt: new Date()
         },
     });
-    res.status(200).send();
+    res.status(200).send({message: `Entry ${req.params.id} achieved!`});
 });
 
 module.exports = router;
