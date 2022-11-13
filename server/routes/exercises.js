@@ -1,60 +1,84 @@
-const express = require('express')
-const mongodb = require('mongodb')
-const mongo = require("mongodb").MongoClient
+const express = require('express');
+const mongo = require("mongodb");
 const router = express.Router();
-const url = "mongodb://localhost:27017"
+const url = "mongodb://localhost:27017";
 
-
+mongo.MongoClient.connect(
+    url,
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    },
+    (err, client) => {
+      if (err) {
+        console.error(err)
+        return
+      }
+      db = client.db("mevn2022")
+      exercises = db.collection("exercises");
+    }
+  )
+  
 // Get exercises
 router.get('/', async (req, res) => {
-    res.send(await exercises.find({}).toArray());
-    // res.send('hello');
+    exercises.find().toArray((err, items) => {
+        if (err) {
+          console.error(err)
+          res.status(500).json({ err: err })
+          return
+        }
+        res.status(200).json({ exercises: items })
+      })
 });
-
-router.get('/completed', async (req, res) => {
-    const exercises = await loadExercisesCollection();
-    res.send(await exercises.find({
-        completed: true
-    }).toArray());
-});
-
-router.get('/ongoing', async (req, res) => {
-    const exercises = await loadExercisesCollection();
-    res.send(await exercises.find({
-        completed: false
-    }).toArray());
+// Get filtered exercises
+router.get('/filter', async (req, res) => {
+    res.send(await exercises.find(
+        req.body.filter
+    ).toArray());
 });
 
 // Add exercises
 router.post('/', async (req, res) => {
-    const exercises = await loadExercisesCollection();
     await exercises.insertOne({
-        task: req.body.task,
-        deadline: req.body.deadline,
-        completed: false,
+        name: req.body.name,
+        type: req.body.type,
+        achieved: false,
         createdAt: new Date()
-    });
-    res.status(201).send();
+    },
+    (err, result) => {
+        if (err) {
+          console.error(err)
+          res.status(500).json({ err: err })
+          return
+        }
+        res.status(201).send({message: `Exercise "${req.body.name}" created!`});
+      }
+    )
 });
 
 // Delete exercises
 router.delete('/:id', async (req, res) => {
-    const exercises = await loadExercisesCollection();
     await exercises.deleteOne({
-        _id: new ObjectID(req.params.id)
-    });
-    res.status(200).send();
+        _id: new mongo.ObjectId(req.params.id)
+    },
+    (err, result) => {
+        if (err) {
+          console.error(err)
+          res.status(500).json({ err: err })
+          return
+        }
+        res.status(200).send({message: `Exercise ${req.params.id} deleted!`});
+      }
+    )
 });
 
 // Update exercises
 router.put('/:id', async (req, res) => {
-    const exercises = await loadExercisesCollection();
     await exercises.replaceOne({
-        _id: new ObjectID(req.params.id)
+        _id: new mongo.ObjectId(req.params.id)
     }, {
-        task: req.body.task,
-        deadline: req.body.deadline,
-        completed: false,
+        ...req.body.updates,
+        achieved: false,
         createdAt: new Date()
     });
     res.status(200).send();
@@ -62,9 +86,8 @@ router.put('/:id', async (req, res) => {
 
 //Update Completed Status
 router.patch('/:id', async (req, res) => {
-    const exercises = await loadExercisesCollection();
     await exercises.updateOne({
-        _id: new ObjectID(req.params.id)
+        _id: new mongo.ObjectId(req.params.id)
     }, {
         $set: {
             completed: req.body.completed,
@@ -73,22 +96,5 @@ router.patch('/:id', async (req, res) => {
     });
     res.status(200).send();
 });
-
-
-    mongo.connect(
-        url,
-        {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-        },
-        (err, client) => {
-          if (err) {
-            console.error(err)
-            return
-          }
-          db = client.db("mevn2022")
-          exercises = db.collection("exercises");
-        }
-      )
 
 module.exports = router;
