@@ -1,25 +1,13 @@
-//import http from "../http-common";
-import axios from 'axios';
+import API from "../http-common";
 
-const url = 'http://localhost:5000/exercises/';
-class ExercisesService {
-    static getExercises() {
-        return new Promise((resolve, reject) => {
-            axios.get(url).then((res) => {
-                    const data = res.data;
-                    resolve(
-                        data.map(exercise => ({
-                            ...exercise,
-                            createdAt: new Date(exercise.createdAt)
-                        }))
-                    );
-                })
-                .catch((err) => {
-                    reject(err);
-                })
-
-        });
+export default {
+    getExercises() {
+        return API().get('/')
+    },
+    createExercise(data) {
+        return API('http://localhost:5000/exercises').post('/', data)
+    },
+    deleteExercise(id) {
+        return API('http://localhost:5000/exercises').delete(`/${id}`)
     }
 }
-
-export default new ExercisesService();
