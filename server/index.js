@@ -9,7 +9,9 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const exercises = require('./routes/exercises.js');
+const users = require('./routes/users.js')
 app.use('/exercises', exercises);
+app.use('/users', users);
 
 //section for production stage v
 

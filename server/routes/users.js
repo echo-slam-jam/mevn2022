@@ -15,31 +15,89 @@ mongo.MongoClient.connect(
         return
       }
       db = client.db("mevn2022")
-      exercises = db.collection("exercises");
+      users = db.collection("users");
+      exercises = db.collection('exercises');
     }
   )
   
 // Get exercises
 router.get('/', async (req, res) => {
-    exercises.find().toArray((err, items) => {
+    users.find().toArray((err, items) => {
         if (err) {
           console.error(err)
           res.status(500).json({ err: err })
           return
         }
-        res.status(200).json({ exercises: items })
+        res.status(200).json({ users: items })
       })
 });
-// Get filtered exercises
+
 router.get('/:id', async (req, res) => {
-  exercises.find({_id: new mongo.ObjectId(req.params.id)}).toArray((err, items) => {
-    if (err) {
-      console.error(err)
-      res.status(500).json({ err: err })
-      return
+ const user = users.aggregate([
+  {
+    $match: {
+      _id: new mongo.ObjectId(req.params.id)
     }
-    res.status(200).json({ exercises: items })
-  })
+  },
+  {
+    $lookup: {
+      from: "routines",
+      localField: "routines",
+      foreignField: "_id",
+      as: "routines"
+    }
+  },
+  {
+    $unwind: {
+      path: "$routines",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $lookup: {
+        from: "exercises",
+        localField: "routines.exercise",
+        foreignField: "_id",
+        as: "routines.exercise"
+    }
+  },
+  {
+    "$project": {
+      "routines._id": 0,
+      "routines.exercise._id": 0,
+      "routines.exercise.type": 0,
+      "routines.exercise.createdAt": 0,
+      "routines.exercise.completedAt": 0,
+      "routines.exercise.achieved": 0,
+      "routines.exercise.achievedAt": 0,
+    }
+  }
+]).toArray((err, user) => {
+  
+  if (err) {
+    console.error(err)
+    res.status(500).json({ err: err })
+    return
+  }
+res.status(200).json({user})
+})
+});
+
+router.get('/:id', async (req, res) => {
+  users.find({_id: new mongo.ObjectId(req.params.id)}).toArray((err, items) => {
+      if (err) {
+        console.error(err)
+        res.status(500).json({ err: err })
+        return
+      }
+      res.status(200).json({ user: item })
+    })
+});
+// Get filtered exercises
+router.get('/filter', async (req, res) => {
+    res.send(await exercises.find(
+        req.body.filter
+    ).toArray());
 });
 
 // Add exercises
