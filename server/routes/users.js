@@ -2,6 +2,9 @@ const express = require('express');
 const mongo = require("mongodb");
 const router = express.Router();
 const url = "mongodb://localhost:27017";
+const bcrypt = require('bcrypt');
+const jwt = require("jsonwebtoken");
+const jwtdecode = require("jwt-decode");
 
 mongo.MongoClient.connect(
     url,
@@ -19,6 +22,58 @@ mongo.MongoClient.connect(
       exercises = db.collection('exercises');
     }
   )
+
+const comparePassword = function(password) {
+  return bcrypt.compareSync(password, this.password)
+}
+
+//AUTHENTICATION
+
+router.post('/register', async (req, res) => {
+  await users.insertOne({
+    name: req.body.name,
+    password: bcrypt.hashSync(req.body.password, 10),
+    routines: [],
+},
+(err, result) => {
+    if (err) {
+      console.error(err)
+      res.status(500).json({ err: err })
+      return
+    }
+    result.password = undefined;
+    res.status(201).send({message: `User "${req.body.name}" created!`});
+  })
+});
+
+//sign in
+router.get('/signin', async (req, res) => {
+  await users.find({
+    name: req.body.name,
+  }).toArray((err, items) => {
+    if (err) throw err;
+    console.log(items[0]._id)
+    if (!items || !bcrypt.compareSync(req.body.password, items[0].password)) {
+      return res.status(401).json({ message: 'Authentication failed. Invalid user or password.' });
+    }
+    return res.status(200).json({ token: jwt.sign({ name: items[0].name, _id:items[0]._id  }, 'RESTFULAPIs') });
+})
+});
+
+//get profile of user
+router.get('/profile', async (req, res) => {
+  try {
+    // console.log(req.header("authorization"))
+    const token = req.header("authorization").split(' ')[1];
+    console.log(token)
+    jwt.verify(token, 'RESTFULAPIs')
+    const val = jwtdecode(token);
+    res.status(200).json({token, val})
+  } catch (err) {
+    return res.send(err)
+  }
+
+});
   
 // Get exercises
 router.get('/', async (req, res) => {
