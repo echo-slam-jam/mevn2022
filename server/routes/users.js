@@ -28,8 +28,41 @@ router.get('/', async (req, res) => {
           res.status(500).json({ err: err })
           return
         }
-        res.status(200).json({ users: items })
+        res.status(200).json({ users: items, sample: sample })
       })
+});
+
+// Get distribution of exercise types
+router.get('/totals', async (req, res) => {
+  exercises.aggregate([
+    { "$facet": {
+      "Pull": [
+        { $match : { type: "pull"}},
+        { $count: "pull" },
+      ],
+      "Push": [
+        { $match : { type: "push"}},
+        { $count: "pushes" }
+      ],
+      "TotalExercises": [
+        { $count: "names" }
+      ],
+    }},
+    {
+      $project: {
+        "Pull": { "$arrayElemAt": ["$Pull.pull", 0] },
+        "Push": { "$arrayElemAt": ["$Push.pushes", 0] },
+        "TotalExercises": { "$arrayElemAt": ["$TotalExercises.names", 0] }
+      }
+    }
+  ]).toArray((err, items) => {
+      if (err) {
+        console.error(err)
+        res.status(500).json({ err: err })
+        return
+      }
+      res.status(200).json({ Totals: items })
+    })
 });
 
 router.get('/:id', async (req, res) => {
@@ -71,7 +104,15 @@ router.get('/:id', async (req, res) => {
       "routines.exercise.achieved": 0,
       "routines.exercise.achievedAt": 0,
     }
-  }
+  },
+  {
+    $group: {
+      _id : "$_id",
+      name: { $first: "$name" },
+      routines: { $push: "$routines" }
+    }
+  },
+
 ]).toArray((err, user) => {
   
   if (err) {

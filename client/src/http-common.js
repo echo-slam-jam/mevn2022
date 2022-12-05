@@ -1,6 +1,12 @@
 import axios from "axios";
 
-export default (url = "http://localhost:5000/exercises") => {
+export const exercisesAPI = (url = "http://localhost:5000/exercises") => {
+  return axios.create({
+    baseURL: url,
+  })
+};
+
+export const usersAPI = (url = "http://localhost:5000/users") => {
   return axios.create({
     baseURL: url,
   })

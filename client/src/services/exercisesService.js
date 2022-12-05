@@ -1,13 +1,27 @@
-import API from "../http-common";
+import {exercisesAPI, usersAPI} from "../http-common";
 
 export default {
+//EXERCISES
     getExercises() {
-        return API().get('/')
+        return exercisesAPI().get('/')
+    },
+    findExercise(id) {
+        return exercisesAPI().get(`/${id}`)
     },
     createExercise(data) {
-        return API('http://localhost:5000/exercises').post('/', data)
+        return exercisesAPI('http://localhost:5000/exercises').post('/', data)
     },
     deleteExercise(id) {
-        return API('http://localhost:5000/exercises').delete(`/${id}`)
-    }
+        return exercisesAPI('http://localhost:5000/exercises').delete(`/${id}`)
+    },
+//USERS
+    getUsers() {
+        return usersAPI().get('/')
+    },
+    createUser(data) {
+        return usersAPI('http://localhost:5000/exercises').post('/', data)
+    },
+    deleteUser(id) {
+        return usersAPI('http://localhost:5000/exercises').delete(`/${id}`)
+    },
 }
