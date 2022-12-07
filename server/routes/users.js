@@ -27,6 +27,25 @@ const comparePassword = function(password) {
   return bcrypt.compareSync(password, this.password)
 }
 
+//AUTHORIZATION
+const verifyToken = async (req,res,next)=>{
+  try {
+      if(req.header("authorization")){
+        const token = await req.header("authorization").split(' ')[1];
+      jwt.verify(token, "RESTFULAPIs", (async (err, decoded) => {
+        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' })
+      req.user = await users.find(decoded._id);
+      console.log(decoded)
+      next();
+      })); 
+      } else {
+        res.status(401).json({message:'Please login to access the data'});
+    }
+  } catch (error) {
+     return next(error); 
+  }
+}
+
 //AUTHENTICATION
 
 router.post('/register', async (req, res) => {
@@ -52,11 +71,13 @@ router.get('/signin', async (req, res) => {
     name: req.body.name,
   }).toArray((err, items) => {
     if (err) throw err;
-    console.log(items[0]._id)
     if (!items || !bcrypt.compareSync(req.body.password, items[0].password)) {
       return res.status(401).json({ message: 'Authentication failed. Invalid user or password.' });
     }
-    return res.status(200).json({ token: jwt.sign({ name: items[0].name, _id:items[0]._id  }, 'RESTFULAPIs') });
+    return res.status(200).json({ 
+      token: jwt.sign({
+         name: items[0].name, _id:items[0]._id  
+      }, 'RESTFULAPIs', {expiresIn: "20s"}) });
 })
 });
 
@@ -65,7 +86,6 @@ router.get('/profile', async (req, res) => {
   try {
     // console.log(req.header("authorization"))
     const token = req.header("authorization").split(' ')[1];
-    console.log(token)
     jwt.verify(token, 'RESTFULAPIs')
     const val = jwtdecode(token);
     res.status(200).json({token, val})
@@ -76,14 +96,14 @@ router.get('/profile', async (req, res) => {
 });
   
 // Get exercises
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
     users.find().toArray((err, items) => {
         if (err) {
           console.error(err)
           res.status(500).json({ err: err })
           return
         }
-        res.status(200).json({ users: items, sample: sample })
+        res.status(200).json({ users: items })
       })
 });
 
