@@ -3,7 +3,9 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 // const jwt = require("jsonwebtoken");
 const app = express();
+const dotenv = require("dotenv");
 
+dotenv.config();
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
@@ -30,6 +32,6 @@ app.use('/users', users);
 //section for production stage ^
 
 // listen to server port
-const port = process.env.PORT || 5000;
+const port = process.env.PORT;
 
 app.listen(port, () => console.log(`listening to port ${port}`));

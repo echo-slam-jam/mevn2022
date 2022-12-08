@@ -5,6 +5,10 @@ const url = "mongodb://localhost:27017";
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
 const jwtdecode = require("jwt-decode");
+const dotenv = require("dotenv");
+const cookieParser = require('cookie-parser');
+router.use(cookieParser());
+dotenv.config();
 
 mongo.MongoClient.connect(
     url,
@@ -23,19 +27,16 @@ mongo.MongoClient.connect(
     }
   )
 
-const comparePassword = function(password) {
-  return bcrypt.compareSync(password, this.password)
-}
 
 //AUTHORIZATION
 const verifyToken = async (req,res,next)=>{
   try {
       if(req.header("authorization")){
         const token = await req.header("authorization").split(' ')[1];
-      jwt.verify(token, "RESTFULAPIs", (async (err, decoded) => {
-        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' })
-      req.user = await users.find(decoded._id);
-      console.log(decoded)
+      jwt.verify(token, process.env.JWT_ACCESS_SECRET, (async (err, decoded) => {
+        if (err) {
+          return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' })
+        }
       next();
       })); 
       } else {
@@ -66,7 +67,7 @@ router.post('/register', async (req, res) => {
 });
 
 //sign in
-router.get('/signin', async (req, res) => {
+router.post('/signin', async (req, res) => {
   await users.find({
     name: req.body.name,
   }).toArray((err, items) => {
@@ -74,19 +75,57 @@ router.get('/signin', async (req, res) => {
     if (!items || !bcrypt.compareSync(req.body.password, items[0].password)) {
       return res.status(401).json({ message: 'Authentication failed. Invalid user or password.' });
     }
-    return res.status(200).json({ 
-      token: jwt.sign({
-         name: items[0].name, _id:items[0]._id  
-      }, 'RESTFULAPIs', {expiresIn: "20s"}) });
+    const accessToken = jwt.sign({ name: items[0].name, _id:items[0]._id }, 
+                                   process.env.JWT_ACCESS_SECRET, {expiresIn: "20s"});
+    const refreshToken = jwt.sign({ name: items[0].name }, 
+                                    process.env.JWT_REFRESH_SECRET, {expiresIn: "1d"});
+
+    // Assigning refresh token in http-only cookie 
+    res.cookie('refresh', refreshToken, { httpOnly: true, 
+      sameSite: 'None', secure: false, 
+      maxAge: 24 * 60 * 60 * 1000 });
+
+    return res.status(200).json({ accessToken, refreshToken });
+
 })
 });
+
+//refresh access token
+router.post('/refresh', async (req, res) => {
+  if (req.cookies?.refresh) {
+      // Destructuring refreshToken from cookie
+      const refreshToken = req.cookies.refresh;
+console.log(req.cookies)
+      // Verifying refresh token
+      jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, 
+      (err, decoded) => {
+          if (err) {
+
+              // Wrong Refesh Token
+              return res.status(406).json({ message: 'Unauthorized' });
+          }
+          else {
+              // Correct token we send a new access token
+              const accessToken = jwt.sign({
+                  username: decoded._id,
+                  email: decoded.name,
+              }, process.env.JWT_REFRESH_SECRET, {
+                  expiresIn: '20s'
+              });
+              return res.json({ accessToken });
+          }
+      })
+  } else {
+      return res.status(406).json({ message: 'Unauthorized' });
+  }
+})
 
 //get profile of user
 router.get('/profile', async (req, res) => {
   try {
     // console.log(req.header("authorization"))
     const token = req.header("authorization").split(' ')[1];
-    jwt.verify(token, 'RESTFULAPIs')
+    jwt.verify(token, process.env.JWT_ACCESS_SECRET)
     const val = jwtdecode(token);
     res.status(200).json({token, val})
   } catch (err) {
