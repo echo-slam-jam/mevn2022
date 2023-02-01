@@ -8,30 +8,22 @@ const dotenv = require("dotenv");
 dotenv.config();
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+    origin: ['http://127.0.0.1:5173', 'http://localhost:5000'],
+    credentials: true
+}));
+
 
 const exercises = require('./routes/exercises.js');
 const users = require('./routes/users.js')
 app.use('/exercises', exercises);
 app.use('/users', users);
-// app.use(function(req, res, next) {
-//     if (req.headers && req.headers.authorization && req.headers.authorization.split(' ')[0] === 'JWT') {
-//       jwt.verify(req.headers.authorization.split(' ')[1], 'RESTFULAPIs', function(err, decode) {
-//         if (err) req.user = undefined;
-//         req.user = decode;
-//         next();
-//       });
-//     } else {
-//       req.user = undefined;
-//       next();
-//     }
-//   });
 
 //section for production stage v
 
 //section for production stage ^
 
 // listen to server port
-const port = process.env.PORT;
-
+const port = 5000;
 app.listen(port, () => console.log(`listening to port ${port}`));
+

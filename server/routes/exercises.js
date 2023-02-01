@@ -18,6 +18,10 @@ mongo.MongoClient.connect(
       exercises = db.collection("exercises");
     }
   )
+
+  router.get('/sample', async (req, res) => {
+      res.status(200).json({ message: "Hello world!"})
+});
   
 // Get exercises
 router.get('/', async (req, res) => {
@@ -88,6 +92,14 @@ router.put('/replace', async (req, res) => {
     });
     res.status(200).send();
 });
+
+router.post('/filter3', async (req, res) => {
+  let array = ["dog", "cats", "animal"];
+  const filter = array.filter(item => {
+    return item != req.body.query
+  })
+  res.status(200).send(filter)
+})
 
 //Update Completed Status
 router.patch('/achieve', async (req, res) => {

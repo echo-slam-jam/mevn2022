@@ -1,5 +1,7 @@
+import { config } from "dotenv";
 import {exercisesAPI, usersAPI} from "../http-common";
-
+import axios from "axios";
+  
 export default {
 //EXERCISES
     getExercises() {
@@ -9,19 +11,28 @@ export default {
         return exercisesAPI().get(`/${id}`)
     },
     createExercise(data) {
-        return exercisesAPI('http://localhost:5000/exercises').post('/', data)
+        return exercisesAPI().post('/', data)
     },
     deleteExercise(id) {
-        return exercisesAPI('http://localhost:5000/exercises').delete(`/${id}`)
+        return exercisesAPI().delete(`/${id}`)
     },
 //USERS
-    getUsers() {
-        return usersAPI().get('/')
+    getProfile() {
+        return usersAPI().get('/profile')
     },
     createUser(data) {
-        return usersAPI('http://localhost:5000/exercises').post('/', data)
+        return usersAPI().post('/', data)
     },
     deleteUser(id) {
-        return usersAPI('http://localhost:5000/exercises').delete(`/${id}`)
+        return usersAPI().delete(`/${id}`)
+    },
+    signin(data) {
+        return usersAPI().post('/signin', data, {withCredentials: true})
+    },
+    signout(data) {
+        return usersAPI().post('/signout', data, {withCredentials: true})
+    },
+    refreshToken(data) {
+        return usersAPI().post('/refresh', data, {withCredentials: true})
     },
 }

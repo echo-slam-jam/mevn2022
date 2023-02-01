@@ -1,14 +1,17 @@
 const express = require('express');
-const mongo = require("mongodb");
 const router = express.Router();
+const cookieParser = require('cookie-parser');
+router.use(cookieParser());
+const mongo = require("mongodb");
 const url = "mongodb://localhost:27017";
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
 const jwtdecode = require("jwt-decode");
 const dotenv = require("dotenv");
-const cookieParser = require('cookie-parser');
-router.use(cookieParser());
+
+
 dotenv.config();
+
 
 mongo.MongoClient.connect(
     url,
@@ -40,7 +43,7 @@ const verifyToken = async (req,res,next)=>{
       next();
       })); 
       } else {
-        res.status(401).json({message:'Please login to access the data'});
+        res.status(401).send({message:'Please login to access the data'});
     }
   } catch (error) {
      return next(error); 
@@ -81,60 +84,112 @@ router.post('/signin', async (req, res) => {
                                     process.env.JWT_REFRESH_SECRET, {expiresIn: "1d"});
 
     // Assigning refresh token in http-only cookie 
-    res.cookie('refresh', refreshToken, { httpOnly: true, 
-      sameSite: 'None', secure: false, 
-      maxAge: 24 * 60 * 60 * 1000 });
+    res.cookie('refresh', refreshToken, { httpOnly: true, sameSite: "none", secure: true,
+      maxAge: 24 * 60 * 60 * 1000 }); //postman or thunderclient does not save `secure: true` tokens in cookies for consequent requests
 
-    return res.status(200).json({ accessToken, refreshToken });
+    return res.status(200).json({ accessToken });
 
 })
 });
 
+router.post('/signout', async (req, res) => {
+
+  res.cookie('refresh', '', {maxAge: 0});
+
+  res.status(200).send({
+      message: 'success'
+  });
+});
+
 //refresh access token
 router.post('/refresh', async (req, res) => {
+  //postman or thunderclient does not save `secure: true` tokens in cookies for consequent requests
   if (req.cookies?.refresh) {
       // Destructuring refreshToken from cookie
       const refreshToken = req.cookies.refresh;
-console.log(req.cookies)
+
       // Verifying refresh token
       jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, 
       (err, decoded) => {
           if (err) {
 
               // Wrong Refesh Token
-              return res.status(406).json({ message: 'Unauthorized' });
+              return res.status(401).json({ message: 'Unauthorized' });
           }
           else {
               // Correct token we send a new access token
               const accessToken = jwt.sign({
-                  username: decoded._id,
-                  email: decoded.name,
-              }, process.env.JWT_REFRESH_SECRET, {
+                  name: decoded.name,
+              }, process.env.JWT_ACCESS_SECRET, {
                   expiresIn: '20s'
               });
-              return res.json({ accessToken });
+              res.send({ accessToken });
           }
       })
   } else {
-      return res.status(406).json({ message: 'Unauthorized' });
+      return res.status(401).json({ message: 'Unauthorized' });
   }
 })
 
 //get profile of user
-router.get('/profile', async (req, res) => {
+router.get('/profile', verifyToken, async (req, res) => {
   try {
     // console.log(req.header("authorization"))
     const token = req.header("authorization").split(' ')[1];
-    jwt.verify(token, process.env.JWT_ACCESS_SECRET)
     const val = jwtdecode(token);
-    res.status(200).json({token, val})
+    res.send({token, val})
   } catch (err) {
-    return res.send(err)
+    return res.status(401).send({
+      message: 'unauthenticated'
+  });
   }
 
 });
+
+//sample array functions
+router.post('/createArr', async (req, res) => {
+  await users.insertOne({
+      name: req.body.name,
+      routine: []
+  },
+  (err, result) => {
+      if (err) {
+        console.error(err)
+        res.status(500).json({ err: err })
+        return
+      }
+      res.status(201).send({message: `User "${req.body.name}" created!`});
+    }
+  )
+});
+
+//update array
+router.put('/createArr/:id', async (req, res) => {
+  await users.updateOne({
+    _id: new mongo.ObjectId(req.params.id)
+}, {
+    $push: { "routine": {
+      name: req.body.name,
+      type: req.body.type
+    }
+        
+    },
+},
+    
   
-// Get exercises
+  (err, result) => {
+      if (err) {
+        console.error(err)
+        res.status(500).json({ err: err })
+        return
+      }
+      res.status(200).send({result});
+    }
+  )
+});
+
+  
+// Get users
 router.get('/', verifyToken, async (req, res) => {
     users.find().toArray((err, items) => {
         if (err) {
